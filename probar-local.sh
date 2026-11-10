@@ -8,9 +8,26 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-PY=$(command -v python3 || command -v python)
-"$PY" -c 'import sys; assert sys.version_info >= (3, 10), "Hace falta Python 3.10 o superior"'
+# Busca el Python más nuevo disponible (Homebrew, pyenv, sistema...). 3.9 vale,
+# pero con 3.10+ se instala un Playwright más reciente.
+PY=""
+for v in 3.13 3.12 3.11 3.10; do
+  for dir in "" /opt/homebrew/bin/ /usr/local/bin/ "$HOME/.homebrew/bin/" "$HOME/.pyenv/shims/"; do
+    if command -v "${dir}python$v" >/dev/null 2>&1; then PY="$(command -v "${dir}python$v")"; break 2; fi
+  done
+done
+if [ -z "$PY" ] && command -v uv >/dev/null 2>&1; then
+  echo "==> No hay Python 3.10+; uv descargará uno"
+  uv python install 3.12 >/dev/null && PY="$(uv python find 3.12)"
+fi
+if [ -z "$PY" ]; then
+  PY="$(command -v python3 || command -v python)"
+  echo "==> Usando $("$PY" --version) (funciona, pero si puedes: brew install python@3.12)"
+fi
+"$PY" -c 'import sys; assert sys.version_info >= (3, 9), "Hace falta Python 3.9 o superior"'
+echo "==> Python: $PY ($("$PY" --version))"
 
+if [ -d .venv ] && ! .venv/bin/python -c 'import sys' >/dev/null 2>&1; then rm -rf .venv; fi
 if [ ! -d .venv ]; then
   echo "==> Creando entorno virtual"
   "$PY" -m venv .venv
