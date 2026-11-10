@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Listado de prueba</title>
+<style>.strike{text-decoration:line-through}.card{display:inline-block;width:200px;margin:8px;vertical-align:top}</style>
+</head><body>
+<div id="onetrust-banner-sdk"><button id="onetrust-accept-btn-handler" onclick="this.parentNode.remove()">Aceptar todo</button></div>
+<ul class="grid">
+  <!-- Estilo H&M: precio normal tachado por CSS + etiqueta oculta -->
+  <li class="card"><article>
+    <a href="/es_es/productpage.111.html"><img src="https://img.example/111.jpg" alt="Americana Relaxed Fit"></a>
+    <h2><a href="/es_es/productpage.111.html">Americana Relaxed Fit</a></h2>
+    <p><span class="sale">71,99 €</span> <span class="strike" aria-label="Precio normal">89,99 €</span></p>
+  </article></li>
+  <!-- Estilo Zalando: precio de referencia con etiqueta, sin tachar -->
+  <li class="card"><article>
+    <a href="https://www.zalando.es/levis-jeans-222.html"><img src="https://img.example/222.jpg" alt="Levi's® 501 ORIGINAL - Vaqueros rectos"></a>
+    <div><span>Levi's®</span><h3>501 ORIGINAL - Vaqueros rectos</h3></div>
+    <div><p>59,95 €</p><p>Último precio más bajo: <span>109,95 €</span></p><span>-45%</span></div>
+  </article></li>
+  <!-- Estilo COS: <del> y símbolo delante -->
+  <li class="card"><div>
+    <a href="/es-es/men/product.wool-coat.333.html"><img data-src="https://img.example/333.jpg" src="data:image/gif;base64,R0lGOD" alt=""></a>
+    <a href="/es-es/men/product.wool-coat.333.html">Abrigo de lana regular</a>
+    <span>€149</span><del>€250</del>
+  </div></li>
+  <!-- Sin rebaja: no debe salir -->
+  <li class="card"><article>
+    <a href="/p/444"><img src="https://img.example/444.jpg" alt="Camiseta básica"></a>
+    <p>12,99 €</p>
+  </article></li>
+  <!-- Rebaja con miles y espacio duro -->
+  <li class="card"><article>
+    <a href="/p/555"><img src="https://img.example/555.jpg" alt="Chaqueta de piel"></a>
+    <p><s>1.299,00&nbsp;€</s> <b>899,00&nbsp;€</b></p>
+  </article></li>
+</ul>
+</body></html>

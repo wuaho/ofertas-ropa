@@ -1,0 +1,43 @@
+{
+ "categories": [
+  {
+   "id": 100,
+   "name": "MUJER",
+   "key": "I2024-MUJER",
+   "sectionName": "WOMAN",
+   "subcategories": [
+    {
+     "id": 101,
+     "name": "ABRIGOS",
+     "subcategories": []
+    }
+   ]
+  },
+  {
+   "id": 200,
+   "name": "HOMBRE",
+   "key": "I2024-HOMBRE",
+   "sectionName": "MAN",
+   "subcategories": [
+    {
+     "id": 201,
+     "name": "SPECIAL PRICES",
+     "sectionName": "MAN",
+     "subcategories": []
+    },
+    {
+     "id": 202,
+     "name": "BLAZERS",
+     "sectionName": "MAN",
+     "subcategories": []
+    },
+    {
+     "id": 203,
+     "name": "MENU",
+     "irrelevant": true,
+     "subcategories": []
+    }
+   ]
+  }
+ ]
+}

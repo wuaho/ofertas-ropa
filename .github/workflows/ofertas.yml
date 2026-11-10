@@ -1,0 +1,59 @@
+name: Ofertas diarias
+
+on:
+  schedule:
+    - cron: "23 6 * * *"   # 07:23 en Madrid en invierno, 08:23 en verano
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "Argumentos extra (p. ej. --only zara --max-categories 5 --debug)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ofertas
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Instalar Chromium (para H&M, COS, Arket, Mango, Uniqlo y Zalando)
+        run: python -m playwright install --with-deps chromium
+
+      - name: Sacar ofertas
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python -m ofertas --out docs ${{ github.event.inputs.args }}
+
+      # Con --compare no se escribe nada: el resultado está en el log de "Sacar ofertas".
+      - name: Guardar respuestas crudas (si --debug)
+        if: always() && hashFiles('debug/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: debug/
+          retention-days: 3
+
+      - name: Publicar
+        run: |
+          git config user.name "ofertas-bot"
+          git config user.email "ofertas-bot@users.noreply.github.com"
+          git add docs/deals.json docs/history.json
+          git diff --cached --quiet || git commit -m "Ofertas $(date -u +%F)"
+          git push

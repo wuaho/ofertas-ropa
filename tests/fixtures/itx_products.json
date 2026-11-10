@@ -1,0 +1,127 @@
+{
+ "products": [
+  {
+   "id": 1001,
+   "name": "CAZADORA BOMBER EFECTO ANTE",
+   "bundleProductSummaries": [
+    {
+     "id": 1001,
+     "name": "CAZADORA BOMBER EFECTO ANTE",
+     "productUrl": "cazadora-bomber-efecto-ante-l03710514",
+     "detail": {
+      "colors": [
+       {
+        "id": "717",
+        "name": "Chocolate",
+        "sizes": [
+         {
+          "name": "S",
+          "price": "2599",
+          "oldPrice": "3999",
+          "isBuyable": true,
+          "visibilityValue": "SHOW"
+         },
+         {
+          "name": "M",
+          "price": "2599",
+          "oldPrice": "3999",
+          "isBuyable": true,
+          "visibilityValue": "SHOW"
+         },
+         {
+          "name": "L",
+          "price": "2599",
+          "oldPrice": "3999",
+          "isBuyable": false,
+          "visibilityValue": "SHOW"
+         }
+        ]
+       },
+       {
+        "id": "800",
+        "name": "Negro",
+        "sizes": [
+         {
+          "name": "M",
+          "price": "3999",
+          "oldPrice": null,
+          "isBuyable": true,
+          "visibilityValue": "SHOW"
+         }
+        ]
+       }
+      ],
+      "xmedia": [
+       {
+        "colorCode": "717",
+        "xmediaItems": [
+         {
+          "medias": [
+           {
+            "url": "https://static.pullandbear.net/assets/public/aa/bb/717-1.jpg?ts=1"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 1002,
+   "name": "JERSEY PUNTO",
+   "bundleProductSummaries": [
+    {
+     "id": 1002,
+     "name": "JERSEY PUNTO",
+     "detail": {
+      "colors": [
+       {
+        "id": "1",
+        "name": "Gris",
+        "sizes": [
+         {
+          "name": "M",
+          "price": "2999",
+          "oldPrice": null,
+          "isBuyable": true,
+          "visibilityValue": "SHOW"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 1003,
+   "name": "MOCHILA BÁSICA",
+   "bundleProductSummaries": [
+    {
+     "id": 1003,
+     "name": "MOCHILA BÁSICA",
+     "detail": {
+      "colors": [
+       {
+        "id": "2",
+        "name": "Negro",
+        "sizes": [
+         {
+          "name": "U",
+          "price": "1999",
+          "oldPrice": "2299",
+          "isBuyable": true,
+          "visibilityValue": "SHOW"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

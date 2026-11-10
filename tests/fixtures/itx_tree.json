@@ -1,0 +1,57 @@
+{
+ "categories": [
+  {
+   "id": 1,
+   "name": "MUJER",
+   "nameEn": "WOMAN",
+   "key": "PULL_MUJER",
+   "subcategories": [
+    {
+     "id": 11,
+     "name": "Bolsos",
+     "subcategories": []
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "HOMBRE",
+   "nameEn": "MAN",
+   "key": "PULL_HOMBRE",
+   "subcategories": [
+    {
+     "id": 21,
+     "name": "ROPA",
+     "subcategories": [
+      {
+       "id": 211,
+       "name": "Cazadoras",
+       "subcategories": []
+      },
+      {
+       "id": 212,
+       "name": "Jerséis",
+       "subcategories": []
+      },
+      {
+       "id": 213,
+       "name": "-",
+       "subcategories": []
+      }
+     ]
+    },
+    {
+     "id": 22,
+     "name": "ACCESORIOS",
+     "subcategories": [
+      {
+       "id": 221,
+       "name": "Bolsos y mochilas",
+       "subcategories": []
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

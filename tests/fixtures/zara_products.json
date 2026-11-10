@@ -1,0 +1,75 @@
+{
+ "productGroups": [
+  {
+   "elements": [
+    {
+     "commercialComponents": [
+      {
+       "id": 555,
+       "name": "BLAZER REGULAR FIT TRAJE CON LANA",
+       "price": 3999,
+       "oldPrice": 8995,
+       "seo": {
+        "keyword": "blazer-regular-fit-traje-con-lana",
+        "seoProductId": "0123456",
+        "discernProductId": 555
+       },
+       "detail": {
+        "colors": [
+         {
+          "name": "Gris",
+          "price": 3999,
+          "oldPrice": 8995,
+          "xmedia": [
+           {
+            "url": "https://static.zara.net/assets/public/x/y/z.jpg?ts=1&w={width}"
+           }
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "id": 556,
+       "name": "CAMISETA BÁSICA",
+       "price": 1595,
+       "seo": {
+        "keyword": "camiseta",
+        "seoProductId": "1",
+        "discernProductId": 556
+       },
+       "detail": {
+        "colors": []
+       }
+      },
+      {
+       "id": 557,
+       "name": "JERSEY RELAXED FIT ESTRUCTURA LAVADO",
+       "price": 1799,
+       "oldPrice": 2595,
+       "seo": {
+        "keyword": "jersey",
+        "seoProductId": "2",
+        "discernProductId": 557
+       },
+       "detail": {
+        "colors": [
+         {
+          "name": "Crudo",
+          "xmedia": [
+           {
+            "path": "2026/V/0/2/p/1/2/3",
+            "name": "x_1",
+            "timestamp": "99"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
