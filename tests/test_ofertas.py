@@ -229,7 +229,7 @@ def test_asos_parse_and_paging():
     http = Fake()
     deals, mode = asos.scan(config.ASOS, http, 10)
     by_id = {d.product_id: d for d in deals}
-    assert http.offsets == [0, 3]  # para al llegar a itemCount
+    assert http.offsets == [0, 0, 3]  # sonda + páginas; para al llegar a itemCount
     assert set(by_id) == {"1", "4"}
     nike = by_id["1"]
     assert (nike.price, nike.old_price, nike.discount) == (89.99, 149.99, 40)

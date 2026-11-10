@@ -15,7 +15,7 @@ from .common import Deal, classify, discount_pct
 from .http import Http
 
 log = logging.getLogger(__name__)
-PAGE_SIZE = 200
+PAGE_SIZE = 72  # lo que usa la propia web; valores mayores dan 400
 
 
 def scan(store: dict, http: Http, max_categories: int, full: bool = False) -> tuple[list[Deal], str]:
@@ -24,9 +24,17 @@ def scan(store: dict, http: Http, max_categories: int, full: bool = False) -> tu
         "limit": PAGE_SIZE, "store": "ES", "lang": "es-ES", "currency": "EUR",
         "country": "ES", "sizeSchema": "EU", "channel": "desktop-web", "rowlength": 4,
     }
+    # Si aun así responde 400, se prueba con los parámetros mínimos.
+    try:
+        http.get_json(url, {**params, "offset": 0, "limit": 1})
+    except RuntimeError as e:
+        if "400" not in str(e):
+            raise
+        log.warning("[asos] 400 con parámetros completos, pruebo con los mínimos")
+        params = {"limit": PAGE_SIZE, "store": "ES", "lang": "es-ES", "currency": "EUR"}
     deals: list[Deal] = []
     offset, total = 0, None
-    while offset < store.get("max_items", 12_000):
+    while offset < store.get("max_items", 12_000):  # ~170 peticiones como mucho
         data = http.get_json(url, {**params, "offset": offset})
         products = data.get("products") or []
         total = data.get("itemCount", total)
