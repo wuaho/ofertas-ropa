@@ -236,3 +236,42 @@ def test_asos_parse_and_paging():
     assert nike.url == "https://www.asos.com/es/nike/zapatillas/prd/1"
     assert nike.image == "https://images.asos-media.com/products/x/1-1-black"
     assert nike.tipo == "Calzado" and by_id["4"].discount == 50
+
+
+def test_hybrid_http_falls_back_to_browser():
+    import functools, http.server, threading
+    import pytest
+    pytest.importorskip("playwright")
+    from ofertas import browser
+    from ofertas.http import HybridHttp
+
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(FIX))
+    handler.log_message = lambda *a, **k: None
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+    b = browser.Browser()
+    try:
+        client = HybridHttp(base, "test", None, lambda: b)
+
+        def blocked(url, params=None):
+            raise RuntimeError(f"No se pudo obtener {url}: 403 Client Error: Forbidden")
+        client.http.get_json = blocked
+
+        data = client.get_json(base + "/itx_category.json", {"x": 1})
+        assert data == {"productIds": [1001, 1002, 1003]}
+        assert client.browser_http is not None  # pasó a navegador
+        assert client.get_json(base + "/itx_tree.json")["categories"][1]["name"] == "HOMBRE"
+
+        # Un error que no es de bloqueo (p. ej. 404 por URL mal) no cambia de modo
+        client2 = HybridHttp(base, "t2", None, lambda: b)
+        def notfound(url, params=None):
+            raise RuntimeError(f"No se pudo obtener {url}: 404 Client Error")
+        client2.http.get_json = notfound
+        with pytest.raises(RuntimeError):
+            client2.get_json(base + "/nada.json")
+        assert client2.browser_http is None
+        client.close()
+    finally:
+        b.close()
+        srv.shutdown()

@@ -71,6 +71,14 @@ Cada tienda con navegador tiene en `config.py` una lista de `sources` en orden d
 
 En `config.py`, `BROWSER_STORES` → `zalando` → `brands`. Los nombres son los de la URL de Zalando: si la marca está en `zalando.es/selected-homme/`, el slug es `selected-homme`. `min_discount` controla el descuento mínimo. Nike está dividida en dos marcas en Zalando: `nike-sportswear` (calle) y `nike-performance` (deporte).
 
+## Antibots
+
+Casi todas estas webs usan antibots (Akamai y similares) que no miran tanto la IP como la *huella* del cliente:
+
+- **APIs**: si `requests` recibe 403, 429 o se queda colgado, esa tienda pasa automáticamente a hacer las mismas peticiones con `fetch()` desde dentro de su propia web, abierta en un navegador real (con las cookies del antibot). Lo verás en el log como "paso a navegador".
+- **Navegador**: se usa tu Google Chrome instalado (`BROWSER_CHANNELS` en `config.py`), con su User-Agent real. Si una página responde 403, se espera unos segundos y se recarga una vez (muchos antibots resuelven un reto JS y dejan pasar).
+- `OFERTAS_HEADED=1 ./probar-local.sh` abre las ventanas visibles, por si quieres ver qué pasa.
+
 ## Problemas conocidos
 
 - **Antibots**: Zara, Mango, Zalando y Uniqlo tienen protección. Si una tienda falla siempre en Actions (HTTP 403 o 0 productos, y la captura de `--debug` muestra un captcha), ejecútalo desde tu ordenador con `cron`/`launchd` y `git push`, o con un *self-hosted runner*. Desde una IP de casa casi nunca bloquean.

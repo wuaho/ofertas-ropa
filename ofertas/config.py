@@ -59,6 +59,12 @@ ZARA = {
     "path": f"/{COUNTRY}/{LANG}",
 }
 
+# Navegador para Playwright, en orden de preferencia. "chrome" = tu Google Chrome
+# instalado (lo más parecido a un visitante normal); "chromium" = Chromium completo
+# en modo headless nuevo; None = el "headless shell" por defecto (lo que más
+# detectan los antibots, solo como último recurso).
+BROWSER_CHANNELS = ["chrome", "chromium", None]
+
 # Tiendas que se leen con navegador (Playwright). Cada tienda tiene "sources":
 # grupos de URLs en orden de preferencia. Se usa el PRIMER grupo que devuelva
 # ofertas: primero la sección de rebajas y, si no existe o está vacía, el catálogo.
@@ -69,7 +75,7 @@ BROWSER_STORES = [
         "name": "H&M",
         "sources": [
             ["https://www2.hm.com/es_es/hombre/rebajas/ver-todo.html?page={page}",
-             "https://www2.hm.com/es_es/hombre/last-chance.html?page={page}"],
+             "https://www2.hm.com/es_es/hombre/last-chance/ver-todo.html?page={page}"],
         ],
         "sale_only": True,
         "max_pages": 10,

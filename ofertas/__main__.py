@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import asos, browser, config, itx, shopify, zara
 from .build import build
-from .http import Http
+from .http import HybridHttp
 from .notify import telegram_summary
 
 ALL_STORES = (
@@ -33,15 +33,27 @@ class Clients:
     def __init__(self, debug: bool):
         self.debug = debug
         self._browser: browser.Browser | None = None
+        self._hybrids: list[HybridHttp] = []
+
+    def browser(self) -> browser.Browser:
+        if self._browser is None:
+            self._browser = browser.Browser(Path("debug") / "browser" if self.debug else None)
+        return self._browser
 
     def get(self, store_id: str, cfg: dict, scan):
         if scan is browser.scan:
-            if self._browser is None:
-                self._browser = browser.Browser(Path("debug") / "browser" if self.debug else None)
-            return self._browser
-        return Http(cfg["base"], Path("debug") / store_id if self.debug else None)
+            return self.browser()
+        # Tiendas con API: requests primero; si el antibot bloquea, navegador.
+        client = HybridHttp(cfg["base"], store_id, Path("debug") / store_id if self.debug else None, self.browser)
+        self._hybrids.append(client)
+        return client
 
     def close(self):
+        for h in self._hybrids:
+            try:
+                h.close()
+            except Exception:
+                pass
         if self._browser:
             self._browser.close()
 

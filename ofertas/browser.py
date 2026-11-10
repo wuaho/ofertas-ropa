@@ -8,8 +8,12 @@ productos con precio tachado/"precio normal" y saca nombre, precios, URL e image
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
 import re
+import time
+from urllib.parse import urlencode
 from pathlib import Path
 
 from . import config
@@ -30,15 +34,37 @@ STEALTH_JS = "Object.defineProperty(navigator, 'webdriver', {get: () => undefine
 
 
 class Browser:
-    """Un único Chromium para todas las tiendas."""
+    """Un único navegador para todas las tiendas.
+
+    Los antibots (Akamai y compañía) reconocen el "headless shell" que Playwright
+    usa por defecto. Por eso se prueba primero tu Google Chrome instalado, luego
+    el Chromium completo (headless "nuevo", casi idéntico a uno normal) y solo
+    al final el modo por defecto. OFERTAS_HEADED=1 abre ventanas visibles.
+    """
 
     def __init__(self, debug_dir: Path | None = None):
         from playwright.sync_api import sync_playwright  # import tardío: solo si hace falta
 
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(
-            headless=True, args=["--disable-blink-features=AutomationControlled"]
-        )
+        headless = os.getenv("OFERTAS_HEADED", "") not in ("1", "true", "yes")
+        args = ["--disable-blink-features=AutomationControlled"]
+        self._browser = None
+        for channel in config.BROWSER_CHANNELS:
+            try:
+                kwargs = {"headless": headless, "args": args}
+                if channel:
+                    kwargs["channel"] = channel
+                self._browser = self._pw.chromium.launch(**kwargs)
+                log.info("Navegador: %s (%s)", channel or "por defecto", "headless" if headless else "visible")
+                break
+            except Exception as e:
+                log.info("Navegador %s no disponible: %s", channel, str(e).splitlines()[0][:120])
+        if self._browser is None:
+            raise RuntimeError("No se pudo abrir ningún navegador (¿falta 'playwright install chromium'?)")
+        # User-Agent real del navegador, sin la palabra "Headless" que lo delata.
+        probe = self._browser.new_page()
+        self.user_agent = probe.evaluate("navigator.userAgent").replace("HeadlessChrome", "Chrome")
+        probe.close()
         self.debug_dir = debug_dir
         self.pages_loaded = 0
 
@@ -46,7 +72,7 @@ class Browser:
         ctx = self._browser.new_context(
             locale="es-ES",
             timezone_id="Europe/Madrid",
-            user_agent=config.HEADERS["User-Agent"],
+            user_agent=self.user_agent,
             viewport={"width": 1366, "height": 900},
         )
         ctx.add_init_script(STEALTH_JS)
@@ -99,17 +125,19 @@ class Browser:
             resp = page.goto(url, wait_until="domcontentloaded", timeout=45_000)
             self.pages_loaded += 1
             if resp is not None and resp.status >= 400:
-                log.warning("[%s] %s -> HTTP %s", store_id, url, resp.status)
-                return None
+                # Muchos antibots responden 403 con un reto JS que pone una cookie
+                # y recarga. Le damos unos segundos y lo intentamos una vez más.
+                page.wait_for_timeout(6000)
+                resp = page.reload(wait_until="domcontentloaded", timeout=45_000)
+                if resp is not None and resp.status >= 400:
+                    log.warning("[%s] %s -> HTTP %s", store_id, url, resp.status)
+                    self._dump(page, url, store_id)
+                    return None
             page.wait_for_timeout(2500)
             self._accept_cookies(page)
             self._scroll_all(page, scroll_rounds)
             items = page.evaluate(EXTRACT_JS)
-            if self.debug_dir:
-                self.debug_dir.mkdir(parents=True, exist_ok=True)
-                name = hashlib.md5(url.encode()).hexdigest()[:8]
-                (self.debug_dir / f"{store_id}_{name}.html").write_text(page.content())
-                page.screenshot(path=str(self.debug_dir / f"{store_id}_{name}.png"), full_page=False)
+            self._dump(page, url, store_id)
             log.info("[%s] %s -> %d rebajados", store_id, url, len(items))
             return items
         except Exception as e:
@@ -117,6 +145,17 @@ class Browser:
             return None
         finally:
             page.close()
+
+    def _dump(self, page, url: str, store_id: str) -> None:
+        if not self.debug_dir:
+            return
+        try:
+            self.debug_dir.mkdir(parents=True, exist_ok=True)
+            name = hashlib.md5(url.encode()).hexdigest()[:8]
+            (self.debug_dir / f"{store_id}_{name}.html").write_text(page.content())
+            page.screenshot(path=str(self.debug_dir / f"{store_id}_{name}.png"), full_page=False)
+        except Exception as e:
+            log.info("[%s] no pude guardar la captura: %s", store_id, e)
 
     def discover_links(self, ctx, start: str, pattern: str, limit: int) -> list[str]:
         page = ctx.new_page()
@@ -134,6 +173,62 @@ class Browser:
             if rx.search(h) and h not in seen:
                 seen.append(h)
         return seen[:limit]
+
+
+class BrowserHttp:
+    """Hace las peticiones a la API desde dentro de la web de la tienda.
+
+    Abre la portada (así el antibot pone sus cookies, como a un visitante normal)
+    y luego lanza fetch() desde la propia página: misma huella, mismas cookies.
+    Tiene la misma interfaz que Http.get_json, así que los conectores no cambian.
+    """
+
+    def __init__(self, browser: Browser, base: str, store_id: str):
+        self.browser, self.base, self.store_id = browser, base.rstrip("/"), store_id
+        self.ctx = self.page = None
+        self.calls = 0
+        self._last = 0.0
+
+    def _ensure_page(self):
+        if self.page is not None:
+            return
+        self.ctx = self.browser.new_context()
+        self.page = self.ctx.new_page()
+        self.page.goto(self.base + "/", wait_until="domcontentloaded", timeout=45_000)
+        self.page.wait_for_timeout(4000)  # reto JS del antibot, cookies...
+        self.browser._accept_cookies(self.page)
+
+    def get_json(self, url: str, params: dict | None = None) -> dict:
+        self._ensure_page()
+        full = url + ("?" + urlencode(params) if params else "")
+        for attempt in range(1, 4):
+            wait = config.REQUEST_DELAY_S - (time.monotonic() - self._last)
+            if wait > 0:
+                time.sleep(wait)
+            self._last = time.monotonic()
+            self.calls += 1
+            res = self.page.evaluate(
+                """async (u) => {
+                    try {
+                        const r = await fetch(u, {credentials: "include", headers: {Accept: "application/json"}});
+                        return {status: r.status, text: await r.text()};
+                    } catch (e) { return {status: 0, text: String(e)}; }
+                }""",
+                full,
+            )
+            if res["status"] == 200:
+                try:
+                    return json.loads(res["text"])
+                except ValueError:
+                    raise RuntimeError(f"No se pudo obtener {url}: respuesta no es JSON")
+            if res["status"] in (403, 404):
+                break
+            time.sleep(2 ** attempt)
+        raise RuntimeError(f"No se pudo obtener {url} (desde navegador): HTTP {res['status']}")
+
+    def close(self):
+        if self.ctx is not None:
+            self.ctx.close()
 
 
 # ---------------------------------------------------------------------- scan
