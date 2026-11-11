@@ -17,7 +17,7 @@ from urllib.parse import urlencode
 from pathlib import Path
 
 from . import config
-from .common import Deal, classify, discount_pct
+from .common import Deal, classify, discount_pct, slugify
 
 log = logging.getLogger(__name__)
 EXTRACT_JS = (Path(__file__).parent / "extract.js").read_text()
@@ -287,6 +287,20 @@ def scan(store: dict, browser: Browser, max_categories: int, full: bool = False)
         ctx.close()
 
 
+def _brand_for(store: dict, item: dict) -> str | None:
+    """En tiendas multimarca, qué marca configurada aparece en la ficha."""
+    slugs = store.get("brands") or []
+    if not slugs:
+        return None
+    haystack = "-" + slugify(" ".join([item.get("text") or "", item.get("name") or "", item.get("url") or ""])) + "-"
+    labels = store.get("brand_labels", {})
+    # El slug más largo primero: "nike-sportswear" antes que algo más corto.
+    for slug in sorted(slugs, key=len, reverse=True):
+        if f"-{slug}-" in haystack:
+            return labels.get(slug) or slug.replace("-", " ").title()
+    return None
+
+
 def _to_deals(store: dict, items) -> list[Deal]:
     min_pct = store.get("min_discount", config.MIN_DISCOUNT_PCT)
     out = []
@@ -312,5 +326,6 @@ def _to_deals(store: dict, items) -> list[Deal]:
             tipo=classify(name, []),
             sizes=None,
             colors=[],
+            brand=_brand_for(store, it),
         ))
     return out

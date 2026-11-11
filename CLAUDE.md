@@ -57,7 +57,21 @@ Tiendas configuradas (12): Zara, Pull&Bear, Bershka, Massimo Dutti, Nude Project
 - H&M: nueva URL `/hombre/last-chance/ver-todo.html`.
 - Tests: 12 en verde (`pytest`).
 
+## Estado (11-nov-2026)
+
+**Funciona en el Mac del usuario** (commit ea3238e): 2.571 ofertas. Zara 74, Pull&Bear 17, Bershka 23, Massimo Dutti 98, ASOS 1105, H&M 26, Uniqlo 118, Mango 85, Zalando 1025. COS 0 y Arket 0 (ahora mismo no tienen rebajas de hombre), Nude Project 0 (sin rebajas). El arreglo antibots (navegador real + fetch desde la página) funcionó.
+
+Arreglado después, con los comentarios del usuario sobre la página (commit siguiente):
+- "Ver más" salía con número negativo y no se ocultaba: `.more {display:block}` ganaba a `[hidden]`.
+- Fotos borrosas en Bershka y Massimo Dutti: se cogía la foto `-r` (originalName "r…"), que es una miniatura de tela de 23x23 px. Ahora se descartan "r…" y clazz 5 (muestra de color), se prefiere clazz 1 y se pide `&w=600` (las originales son de 2000x3000).
+- H&M/Zalando: el nombre a veces era el alt descriptivo de la foto. Ahora se prefiere el título de la ficha, y se buscan imágenes en data-src/srcset/<picture>.
+- Burbujas de marca: campo `brand` en ASOS (normalizado a la marca configurada) y Zalando (detectada en el texto de la ficha con `brand_labels`). Aparecen al seleccionar esas tiendas.
+- Nuevo `actualizar.sh`: ejecuta y publica (commit + push de docs/). Es lo que debe ir en el cron.
+
 ## Siguientes pasos (en orden)
+
+0. Que el usuario haga `git pull && ./actualizar.sh` para publicar con los arreglos y revise fotos, nombres y marcas en la web.
+
 
 1. **Ejecutar el arreglo en el Mac**: en `~/Personal/ofertas-ropa` → `git pull && ./probar-local.sh`. Después Claude lee `resultado.log` y `debug/` desde la carpeta conectada.
 2. Corregir lo que siga fallando, tienda a tienda (`./probar-local.sh --only <tienda>`). Puntos a vigilar:
@@ -65,7 +79,7 @@ Tiendas configuradas (12): Zara, Pull&Bear, Bershka, Massimo Dutti, Nude Project
    - Mango: 24 ofertas = 8 en "bermudas", 8 en "lino" y 8 en "bañadores". Sospechoso: puede que sean los mismos 8 productos de un carrusel repetido en cada categoría. Revisar las capturas de `debug/browser/mango_*`.
    - Nude Project dio 429 con requests (el híbrido debería resolverlo).
    - ASOS: comprobar si el cambio a limit=72 basta o hace falta el navegador.
-3. Cuando funcione en local: montar el **cron en el ordenador viejo de casa** (falta saber el sistema operativo) con `python -m ofertas` + `git add docs && git commit && git push`, y **quitar el `schedule` del workflow** de GitHub Actions para que no se pisen (dejar `workflow_dispatch`).
+3. Cuando funcione en local: montar el **cron en el ordenador viejo de casa** (falta saber el sistema operativo) con `./actualizar.sh`, y **quitar el `schedule` del workflow** de GitHub Actions para que no se pisen (dejar `workflow_dispatch`).
 4. Opcionales: aviso por Telegram (secrets), dominio propio para la página, añadir Lefties (Inditex, misma API itxrest: solo faltan sus IDs de tienda) u otras marcas Shopify (copiar el bloque de `SHOPIFY_STORES`).
 
 ## Notas para Claude (limitaciones del entorno)

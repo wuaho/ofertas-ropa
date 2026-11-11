@@ -4,3 +4,4 @@ debug/
 *.pyc
 .venv/
 resultado.log
+actualizar.log

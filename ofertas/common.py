@@ -26,6 +26,7 @@ class Deal:
     tipo: str = "Otros"
     sizes: list[str] | None = None  # None = la tienda no da tallas en el listado
     colors: list[str] = field(default_factory=list)
+    brand: str | None = None  # solo en multimarca (ASOS, Zalando)
 
     @property
     def key(self) -> str:

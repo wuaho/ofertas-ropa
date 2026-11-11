@@ -138,14 +138,47 @@ def _product_url(summary: dict, product: dict, store: dict, name: str, color: di
     return url
 
 
+IMG_WIDTH = 600
+
+
+def _media_candidates(block: dict) -> list[tuple[int, int, str]]:
+    """Fotos de un bloque xmedia ordenadas por preferencia.
+
+    Inditex mezcla en el mismo bloque la foto del producto, la del modelo, un
+    primer plano de la tela (originalName "r…", se ve borroso en miniatura) y la
+    muestra de color (clazz 5, png). Cada marca usa letras distintas para el
+    resto, así que: fuera "r…" y clazz 5, y primero las de clazz 1.
+    """
+    out = []
+    order = 0
+    for item in block.get("xmediaItems") or []:
+        for m in item.get("medias") or []:
+            order += 1
+            extra = m.get("extraInfo") or {}
+            url = m.get("url") or extra.get("url") or extra.get("deliveryUrl") or ""
+            name = str(extra.get("originalName") or "").lower()
+            ext = url.split("?")[0].rsplit(".", 1)[-1].lower()
+            if not url.startswith("http") or ext not in ("jpg", "jpeg", "webp"):
+                continue
+            if name.startswith("r") or m.get("clazz") == 5:
+                continue
+            out.append((0 if m.get("clazz") == 1 else 1, order, url))
+    return sorted(out)
+
+
+def _with_width(url: str) -> str:
+    return url + ("&" if "?" in url else "?") + f"w={IMG_WIDTH}"
+
+
 def _image(detail: dict, color: dict) -> str | None:
     color_id = str(color.get("id") or "")
     xmedia = detail.get("xmedia") or []
-    # Preferimos las fotos del color elegido
-    for block in xmedia:
-        if color_id and str(block.get("colorCode") or "") == color_id:
-            for url in find_media_urls(block):
-                return url
-    for url in find_media_urls(xmedia):
+    # Preferimos las fotos del color elegido; si no, cualquiera del producto.
+    blocks = [b for b in xmedia if color_id and str(b.get("colorCode") or "") == color_id] + list(xmedia)
+    for block in blocks:
+        cands = _media_candidates(block)
+        if cands:
+            return _with_width(cands[0][2])
+    for url in find_media_urls(xmedia):  # estructura desconocida: lo que haya
         return url
     return None

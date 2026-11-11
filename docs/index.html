@@ -14,6 +14,7 @@
     :root { --bg: #121212; --card: #1c1c1c; --ink: #f2f0ec; --muted: #9a968f; --line: #2c2c2c; --chip: #262626; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink);
          font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
@@ -31,6 +32,9 @@
           padding: 6px 11px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
   .chip[aria-pressed=true] { background: var(--ink); color: var(--bg); }
   .chip .n { opacity: .6; margin-left: 4px; font-size: 12px; }
+  .chips.brands .chip { background: transparent; border-color: var(--line); font-size: 12px; padding: 5px 10px; }
+  .chips.brands .chip[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .brand-label { flex: 0 0 auto; align-self: center; font-size: 12px; color: var(--muted); padding-right: 2px; }
   details { margin-top: 8px; font-size: 13px; }
   summary { cursor: pointer; color: var(--muted); }
   .filters { display: grid; gap: 10px; padding: 10px 0 4px; }
@@ -73,6 +77,7 @@
     </select>
   </div>
   <div class="chips" id="stores"></div>
+  <div class="chips brands" id="brands" hidden></div>
   <div class="chips" id="tipos"></div>
   <details>
     <summary>Más filtros</summary>
@@ -96,7 +101,7 @@
   const store = (() => { try { return window.localStorage; } catch { return null; } })();
   const saved = (() => { try { return JSON.parse(store?.getItem("ofertas-filtros") || "{}"); } catch { return {}; } })();
   const state = {
-    q: "", sort: saved.sort || "discount", stores: new Set(saved.stores || []), tipos: new Set(),
+    q: "", sort: saved.sort || "discount", stores: new Set(saved.stores || []), tipos: new Set(), brands: new Set(),
     minDisc: saved.minDisc || 0, maxPrice: saved.maxPrice || 200, mySizes: saved.mySizes || "", onlyNew: false, shown: PAGE,
   };
   let deals = [];
@@ -125,6 +130,7 @@
     const list = deals.filter((d) =>
       (!state.stores.size || state.stores.has(d.store)) &&
       (!state.tipos.size || state.tipos.has(d.tipo)) &&
+      (!state.brands.size || !d.brand || state.brands.has(d.brand)) &&
       d.discount >= state.minDisc &&
       (state.maxPrice >= 200 || d.price <= state.maxPrice) &&
       (!state.onlyNew || d.new) &&
@@ -152,7 +158,7 @@
     return `<a class="card" href="${esc(d.url)}" target="_blank" rel="noopener">
       ${img}<div class="badges">${badges.join("")}</div>
       <div class="body">
-        <div class="store">${esc(d.store_name)}</div>
+        <div class="store">${esc(d.store_name)}${d.brand ? " · " + esc(d.brand) : ""}</div>
         <div class="name">${esc(d.name)}</div>
         ${sizes ? `<div class="sizes">${sizes}</div>` : ""}
         <div class="price"><span class="now">${eur(d.price)}</span><span class="old">${eur(d.old_price)}</span></div>
@@ -175,14 +181,25 @@
     const list = filtered();
     $("grid").innerHTML = list.slice(0, state.shown).map(card).join("");
     $("empty").hidden = list.length > 0;
-    $("more").hidden = list.length <= state.shown;
-    $("more").textContent = `Ver más (${list.length - state.shown})`;
+    const remaining = list.length - state.shown;
+    $("more").hidden = remaining <= 0;
+    $("more").textContent = remaining <= PAGE ? `Ver ${remaining} más` : `Ver ${PAGE} más (quedan ${remaining})`;
     const countBy = (k) => deals.reduce((m, d) => (m[d[k]] = (m[d[k]] || 0) + 1, m), {});
     const storeList = [...new Map(deals.map((d) => [d.store, { id: d.store, label: d.store_name }])).values()];
     const tipoCounts = countBy("tipo");
     const tipoList = Object.keys(tipoCounts).sort((a, b) => tipoCounts[b] - tipoCounts[a]).map((t) => ({ id: t, label: t }));
     chips($("stores"), storeList, state.stores, countBy("store"), () => { state.shown = PAGE; persist(); render(); });
     chips($("tipos"), tipoList, state.tipos, tipoCounts, () => { state.shown = PAGE; render(); });
+    // Burbujas de marca: solo cuando hay tiendas multimarca seleccionadas (ASOS, Zalando)
+    const inStores = deals.filter((d) => d.brand && state.stores.has(d.store));
+    const brandCounts = inStores.reduce((m, d) => (m[d.brand] = (m[d.brand] || 0) + 1, m), {});
+    for (const b of [...state.brands]) if (!brandCounts[b]) state.brands.delete(b);
+    const brandList = Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a]).map((b) => ({ id: b, label: b }));
+    $("brands").hidden = brandList.length === 0;
+    if (brandList.length) {
+      chips($("brands"), brandList, state.brands, brandCounts, () => { state.shown = PAGE; render(); });
+      $("brands").insertAdjacentHTML("afterbegin", '<span class="brand-label">Marcas:</span>');
+    }
     $("minDiscV").textContent = `${state.minDisc}%`;
     $("maxPriceV").textContent = state.maxPrice >= 200 ? "sin límite" : eur(state.maxPrice);
   }
@@ -201,7 +218,7 @@
   fetch("deals.json", { cache: "no-store" })
     .then((r) => r.json())
     .then((data) => {
-      deals = data.deals.map((d) => ({ ...d, _text: norm(`${d.name} ${d.category} ${d.tipo} ${d.store_name} ${(d.colors || []).join(" ")}`) }));
+      deals = data.deals.map((d) => ({ ...d, _text: norm(`${d.name} ${d.category} ${d.tipo} ${d.store_name} ${d.brand || ""} ${(d.colors || []).join(" ")}`) }));
       const when = new Date(data.updated_at).toLocaleString("es-ES", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       const nNew = deals.filter((d) => d.new).length;
       const failed = Object.values(data.stores).filter((s) => !s.ok).map((s) => s.name);

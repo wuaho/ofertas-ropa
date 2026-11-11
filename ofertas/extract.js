@@ -69,22 +69,46 @@
     return null;
   };
 
-  const imgSrc = (img) => {
-    if (!img) return null;
-    const cands = [img.currentSrc, img.src, img.getAttribute("data-src"), (img.getAttribute("srcset") || img.getAttribute("data-srcset") || "").split(",")[0].trim().split(" ")[0]];
-    const src = cands.find((s) => s && !s.startsWith("data:"));
+  const firstSrcset = (v) => (v || "").split(",").map((s) => s.trim().split(" ")[0]).filter(Boolean).pop();
+  const usable = (s) => s && !s.startsWith("data:") && !/blank|placeholder|spacer|1x1/i.test(s);
+  const imgSrc = (card) => {
+    // Primero imágenes ya cargadas; luego atributos de carga diferida y <picture>.
+    const cands = [];
+    for (const img of card.querySelectorAll("img")) {
+      if (img.naturalWidth > 40) cands.push(img.currentSrc || img.src);
+      cands.push(img.getAttribute("data-src"), img.getAttribute("data-original"),
+        firstSrcset(img.getAttribute("srcset")), firstSrcset(img.getAttribute("data-srcset")), img.src);
+    }
+    for (const src of card.querySelectorAll("picture source")) {
+      cands.push(firstSrcset(src.getAttribute("srcset")), firstSrcset(src.getAttribute("data-srcset")));
+    }
+    const src = cands.find(usable);
     return src ? new URL(src, location.href).href : null;
   };
 
+  // Texto alternativo que describe la foto ("Una zapatilla negra se muestra…"), no el producto.
+  const DESCRIPTIVE_ALT = /\bse muestra\b|\bfotograf|\bimagen de\b|\bmodelo (lleva|viste)\b|\bsobre fondo\b|\bvista (frontal|lateral|trasera)\b/i;
+  const cleanLines = (txt) => (txt || "").split("\n").map((s) => s.trim())
+    .filter((s) => s.length >= 3 && s.length <= 120 && toNumber(s) === null && !/^-?\d+\s*%$/.test(s) && !OLD_LABEL_RE.test(s));
+
   const productName = (card, link, img) => {
-    const cands = [img && img.alt, link.getAttribute("aria-label"), link.getAttribute("title")];
-    const linkTexts = [...card.querySelectorAll("a[href]")].map((a) => (a.textContent || "").trim())
-      .filter((s) => s.length >= 4 && s.length <= 120 && toNumber(s) === null);
+    const cands = [];
+    // 1) Título explícito de la ficha
+    // (en este orden: querySelectorAll con comas devolvería orden de documento)
+    for (const sel of ["h1,h2,h3,h4,h5", "[class*='title' i]", "[data-testid*='name' i]", "[class*='name' i]:not([class*='brand' i])"]) {
+      for (const h of card.querySelectorAll(sel)) cands.push(...cleanLines(h.innerText || h.textContent));
+    }
+    // 2) Texto de los enlaces y atributos del enlace
+    const linkTexts = [...card.querySelectorAll("a[href]")].flatMap((a) => cleanLines(a.innerText || a.textContent));
     cands.push(...linkTexts.sort((a, b) => b.length - a.length).slice(0, 1));
-    const lines = (card.innerText || "").split("\n").map((s) => s.trim())
-      .filter((s) => s.length >= 4 && s.length <= 120 && toNumber(s) === null && !/^-?\d+\s*%$/.test(s) && !OLD_LABEL_RE.test(s));
-    cands.push(...lines.sort((a, b) => b.length - a.length).slice(0, 1));
-    return (cands.find((s) => s && s.trim().length >= 3) || "").trim();
+    cands.push(link.getAttribute("aria-label"), link.getAttribute("title"));
+    // 3) Texto alternativo de la foto, si no es una descripción de la imagen
+    const alt = img && img.alt;
+    if (alt && !DESCRIPTIVE_ALT.test(alt)) cands.push(alt);
+    // 4) La línea más larga de la ficha
+    cands.push(...cleanLines(card.innerText).sort((a, b) => b.length - a.length).slice(0, 1));
+    if (alt) cands.push(alt);
+    return (cands.find((s) => s && s.trim().length >= 3 && !/^(nuevo|nueva|oferta|rebajas?|sale)$/i.test(s.trim())) || "").trim();
   };
 
   const out = new Map();
@@ -103,7 +127,10 @@
     const img = card.querySelector("img");
     const prev = out.get(key);
     if (prev && prev.price / prev.old_price <= price / old) continue;
-    out.set(key, { url: key, name: productName(card, link, img), price, old_price: old, image: imgSrc(img) });
+    out.set(key, {
+      url: key, name: productName(card, link, img), price, old_price: old, image: imgSrc(card),
+      text: (card.innerText || "").slice(0, 300),  // para detectar la marca en multimarca
+    });
   }
   return [...out.values()];
 }

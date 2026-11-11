@@ -51,12 +51,19 @@ def scan(store: dict, http: Http, max_categories: int, full: bool = False) -> tu
     return deals, "ofertas"
 
 
-def _brand_ok(brand: str, store: dict) -> bool:
-    wanted = [b.lower() for b in store.get("brands", [])]
+def _brand_match(brand: str, store: dict) -> str | None:
+    """Marca configurada a la que corresponde (p. ej. "Nike Running" -> "Nike").
+    Devuelve None si no es de las elegidas; con lista vacía, la marca tal cual."""
+    wanted = store.get("brands", [])
     if not wanted:
-        return True  # lista vacía = todas las marcas
+        return brand or None
     b = (brand or "").lower()
-    return any(w == b or b.startswith(w + " ") or w in b for w in wanted)
+    # La coincidencia más larga primero: "Hugo Boss" antes que "HUGO" o "BOSS".
+    for w in sorted(wanted, key=len, reverse=True):
+        wl = w.lower()
+        if wl == b or b.startswith(wl + " ") or wl in b:
+            return w
+    return None
 
 
 def _value(price: dict, key: str) -> float | None:
@@ -68,8 +75,8 @@ def _value(price: dict, key: str) -> float | None:
 
 
 def parse_product(p: dict, store: dict) -> Deal | None:
-    brand = p.get("brandName") or ""
-    if not _brand_ok(brand, store):
+    brand = _brand_match(p.get("brandName") or "", store)
+    if not brand:
         return None
     price = p.get("price") or {}
     current = _value(price, "current")
@@ -97,8 +104,9 @@ def parse_product(p: dict, store: dict) -> Deal | None:
         discount=pct,
         url=f"{store['base']}/es/{rel}" if rel and not rel.startswith("http") else rel,
         image=image,
-        category=brand,
+        category=p.get("brandName") or brand,
         tipo=classify(name, []),
         sizes=None,
         colors=[p["colour"]] if p.get("colour") else [],
+        brand=brand,
     )

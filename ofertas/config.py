@@ -129,6 +129,17 @@ BROWSER_STORES = [
             "nike-sportswear", "nike-performance", "under-armour", "puma", "salomon", "the-north-face",
             "armani-exchange", "boss", "guess", "hugo", "timberland",
         ],
+        # Nombre visible de cada marca (burbujas de la página). Si falta, se deduce del slug.
+        "brand_labels": {
+            "selected-homme": "Selected Homme", "levi-s": "Levi's", "scalpers": "Scalpers",
+            "tommy-hilfiger": "Tommy Hilfiger", "calvin-klein": "Calvin Klein", "lacoste": "Lacoste",
+            "les-deux": "Les Deux", "carhartt-wip": "Carhartt WIP", "new-balance": "New Balance",
+            "adidas-originals": "adidas Originals", "camper": "Camper", "dr-martens": "Dr. Martens",
+            "nike-sportswear": "Nike", "nike-performance": "Nike", "under-armour": "Under Armour",
+            "puma": "Puma", "salomon": "Salomon", "the-north-face": "The North Face",
+            "armani-exchange": "Armani Exchange", "boss": "BOSS", "guess": "Guess", "hugo": "HUGO",
+            "timberland": "Timberland",
+        },
         "min_discount": 30,
         # hombre-rebajas = ropa + zapatos + complementos de hombre en rebajas
         "sources": [["https://www.zalando.es/hombre-rebajas/{brands}/?p={page}"]],

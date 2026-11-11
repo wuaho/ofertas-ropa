@@ -129,7 +129,7 @@ def test_browser_extractor_on_fixture():
     hm = by_name["Americana Relaxed Fit"]
     assert (hm["price"], hm["old_price"]) == (71.99, 89.99)
     assert hm["url"].endswith("/es_es/productpage.111.html") and hm["image"] == "https://img.example/111.jpg"
-    z = by_name["Levi's® 501 ORIGINAL - Vaqueros rectos"]
+    z = by_name["501 ORIGINAL - Vaqueros rectos"]  # título de la ficha, no el alt
     assert (z["price"], z["old_price"]) == (59.95, 109.95)
     cos = next(i for i in items if "333" in i["url"])
     assert (cos["price"], cos["old_price"]) == (149, 250) and cos["name"] == "Abrigo de lana regular"
@@ -236,6 +236,7 @@ def test_asos_parse_and_paging():
     assert nike.url == "https://www.asos.com/es/nike/zapatillas/prd/1"
     assert nike.image == "https://images.asos-media.com/products/x/1-1-black"
     assert nike.tipo == "Calzado" and by_id["4"].discount == 50
+    assert nike.brand == "Nike" and by_id["4"].brand == "Carhartt WIP"  # marca normalizada
 
 
 def test_hybrid_http_falls_back_to_browser():
@@ -275,3 +276,29 @@ def test_hybrid_http_falls_back_to_browser():
     finally:
         b.close()
         srv.shutdown()
+
+
+def test_itx_image_skips_fabric_closeup_and_swatch():
+    from ofertas.itx import _image
+    def media(name, clazz, url, fmt="jpg"):
+        return {"clazz": clazz, "extraInfo": {"originalName": name}, "url": f"https://static.x.net/{url}.{fmt}?ts=1"}
+    detail = {"xmedia": [{"colorCode": "700", "xmediaItems": [{"set": 0, "medias": [
+        media("r1", 2, "tela"),          # primer plano 23x23: fuera
+        media("c1", 5, "swatch", "png"), # muestra de color: fuera
+        media("o2", 2, "modelo"),
+        media("s1", 1, "producto"),      # clazz 1: preferida
+    ]}]}]}
+    assert _image(detail, {"id": "700"}) == "https://static.x.net/producto.jpg?ts=1&w=600"
+    # Sin clazz 1, la primera válida
+    detail["xmedia"][0]["xmediaItems"][0]["medias"].pop()
+    assert _image(detail, {"id": "700"}) == "https://static.x.net/modelo.jpg?ts=1&w=600"
+
+
+def test_zalando_brand_detection():
+    from ofertas import browser
+    z = next(s for s in config.BROWSER_STORES if s["id"] == "zalando")
+    assert browser._brand_for(z, {"text": "Levi's®\n501 ORIGINAL\n59,95 €", "name": "501", "url": "https://www.zalando.es/x.html"}) == "Levi's"
+    assert browser._brand_for(z, {"text": "Nike Sportswear\nAIR FORCE 1", "name": "", "url": ""}) == "Nike"
+    assert browser._brand_for(z, {"text": "The North Face\nNUPTSE", "name": "", "url": ""}) == "The North Face"
+    assert browser._brand_for(z, {"text": "Marca desconocida", "name": "", "url": ""}) is None
+    assert browser._brand_for({"id": "hm"}, {"text": "Levi's"}) is None  # monomarca: sin marca
