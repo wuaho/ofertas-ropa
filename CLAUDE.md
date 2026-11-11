@@ -1,6 +1,6 @@
 # ofertas-ropa: estado del proyecto y cómo continuar
 
-Última actualización: 2026-11-10 (sesión inicial). Este archivo es el punto de partida para retomar el proyecto.
+Última actualización: 2026-11-11. Este archivo es el punto de partida para retomar el proyecto.
 
 ## Qué es
 
@@ -70,15 +70,10 @@ Arreglado después, con los comentarios del usuario sobre la página (commit sig
 
 ## Siguientes pasos (en orden)
 
-0. Que el usuario haga `git pull && ./actualizar.sh` para publicar con los arreglos y revise fotos, nombres y marcas en la web.
-
-
-1. **Ejecutar el arreglo en el Mac**: en `~/Personal/ofertas-ropa` → `git pull && ./probar-local.sh`. Después Claude lee `resultado.log` y `debug/` desde la carpeta conectada.
-2. Corregir lo que siga fallando, tienda a tienda (`./probar-local.sh --only <tienda>`). Puntos a vigilar:
-   - Zalando: `Page.goto` timeout de 45 s con la URL de 23 marcas. Probar con menos marcas o en varias URLs.
-   - Mango: 24 ofertas = 8 en "bermudas", 8 en "lino" y 8 en "bañadores". Sospechoso: puede que sean los mismos 8 productos de un carrusel repetido en cada categoría. Revisar las capturas de `debug/browser/mango_*`.
-   - Nude Project dio 429 con requests (el híbrido debería resolverlo).
-   - ASOS: comprobar si el cambio a limit=72 basta o hace falta el navegador.
+1. Que el usuario haga `git pull && ./actualizar.sh` (publica en la web) y revise en la página: fotos de Bershka/Massimo Dutti/H&M, nombres, burbujas de marca en ASOS y Zalando, botón "Ver más".
+2. Revisar lo pendiente con los datos de esa ejecución (Claude lee `actualizar.log`/`debug/` desde la carpeta conectada):
+   - Mango: 85 ofertas en modo completo (sin sección de rebajas). Comprobar que no se repiten productos de carruseles entre categorías.
+   - Nude Project, COS y Arket a 0: confirmar que es porque no tienen rebajas y no un fallo.
 3. Cuando funcione en local: montar el **cron en el ordenador viejo de casa** (falta saber el sistema operativo) con `./actualizar.sh`, y **quitar el `schedule` del workflow** de GitHub Actions para que no se pisen (dejar `workflow_dispatch`).
 4. Opcionales: aviso por Telegram (secrets), dominio propio para la página, añadir Lefties (Inditex, misma API itxrest: solo faltan sus IDs de tienda) u otras marcas Shopify (copiar el bloque de `SHOPIFY_STORES`).
 
