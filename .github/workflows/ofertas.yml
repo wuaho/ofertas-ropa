@@ -1,8 +1,9 @@
 name: Ofertas diarias
 
 on:
-  schedule:
-    - cron: "23 6 * * *"   # 07:23 en Madrid en invierno, 08:23 en verano
+  # El cron diario se ejecuta en pepino-server (IP de casa, sin bloqueos):
+  # /srv/homeserver/scripts/ofertas-actualizar.sh + ofertas-ropa.timer (07:23).
+  # Aquí queda solo la ejecución manual como respaldo.
   workflow_dispatch:
     inputs:
       args:
